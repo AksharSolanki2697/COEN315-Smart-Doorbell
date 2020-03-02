@@ -19,8 +19,8 @@
 
 //AP newtowrk stuff
 
-const char* ssid = "ATT2YF8s4t";
-const char* password = "3c5tbs3j5s6w";
+const char* ssid = "SCU-Guest";
+const char* password = "";
 
 void startCameraServer();
 

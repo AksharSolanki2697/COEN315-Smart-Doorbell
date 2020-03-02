@@ -283,10 +283,10 @@ static esp_err_t capture_handler(httpd_req_t *req){
             face_id = run_face_recognition(image_matrix, net_boxes);
         }
         draw_face_boxes(image_matrix, net_boxes, face_id);
-        free(net_boxes->score);
-        free(net_boxes->box);
-        free(net_boxes->landmark);
-        free(net_boxes);
+        //free(net_boxes->score);
+        //free(net_boxes->box);
+        //free(net_boxes->landmark);
+        //free(net_boxes);
     }
 
     jpg_chunking_t jchunk = {req, 0};
