@@ -17,6 +17,8 @@
 
 #include "camera_pins.h"
 
+//AP newtowrk stuff
+
 const char* ssid = "SCU-Guest";
 const char* password = "";
 
@@ -26,6 +28,8 @@ void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
   Serial.println();
+  Serial.println("Using ESP object:");
+  Serial.println(ESP.getSdkVersion());
 
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;

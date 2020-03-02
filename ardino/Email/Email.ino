@@ -2,102 +2,69 @@
 #include <WiFiAP.h>
 #include <WiFiClient.h>"
 #include "ESPAsyncWebServer.h"
-//AP newtowrk stuff
-const char *ssidA = "travis";
-const char *passwordA = "";
+#include "functions.h"
+#include "other.h"
 
-//WiFiServer server(80);
 AsyncWebServer server(80);
 
 //Network Password
 const char* ssid = "SCU-Guest";
 const char* password = "";
 
-//email stuff
-#define emailSenderAccount    "tle2@.edu"    
-#define emailSenderPassword "zqseuywzwnfulytb"
-#define emailRecipient        "tle2@scu.edu"
-#define smtpServer            "smtp.gmail.com"
-#define smtpServerPort        465
-#define emailSubject          "ESP32 Test"
+//AP newtowrk stuff
+const char *ssidA = "travis";
+const char *passwordA = "";
 
-SMTPData smtpData;
+//timer stuff:
+volatile int interruptCounter;
+volatile int iniCount;
+hw_timer_t * timer = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 // Callback function to get the Email sending status
 void sendCallback(SendStatus info);
+void IRAM_ATTR logouput();
+void startTimer();
 
 void setup(){
+  //Setting up pins
   //pinMode(4, OUTPUT);
   ledcSetup(0, 2500, 8);
   ledcAttachPin(4, 0);
   pinMode(19, INPUT);
+
+  //set up serial
   Serial.begin(115200);
   Serial.println();
-  
-  Serial.print("Connecting");
 
+  //setup softAp
   WiFi.softAP(ssidA, passwordA);
   IPAddress myIP = WiFi.softAPIP();
   Serial.print("AP IP address: ");
   Serial.println(myIP);
-
+  
+  //setting up wifi
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
     delay(200);
   }
-
+  Serial.println("this is the local IP");
   Serial.println(WiFi.localIP());
-  
-  server.on("/hello", HTTP_GET, [](AsyncWebServerRequest *request){
-    Makeasound();
+
+  //set generate request
+  server.on("/email", HTTP_GET, [](AsyncWebServerRequest *request){
+    generateEmail();
     request->send(200, "text/plain", "Hello World");
   });
   
+  //other method
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    uint8_t a[4408] = sendRequest();
+    request->send(200, "text/plain", (const char *)a);
+  });
   server.begin();
   Serial.println();
-
-  /*
-  Serial.println();
-  Serial.println("WiFi connected.");
-  Serial.println();
-  Serial.println("Preparing to send email");
-  Serial.println();
-  
-  // Set the SMTP Server Email host, port, account and password
-  smtpData.setLogin(smtpServer, smtpServerPort, emailSenderAccount, emailSenderPassword);
-
-  // For library version 1.2.0 and later which STARTTLS protocol was supported,the STARTTLS will be 
-  // enabled automatically when port 587 was used, or enable it manually using setSTARTTLS function.
-  //smtpData.setSTARTTLS(true);
-
-  // Set the sender name and Email
-  smtpData.setSender("ESP32", emailSenderAccount);
-
-  // Set Email priority or importance High, Normal, Low or 1 to 5 (1 is highest)
-  smtpData.setPriority("High");
-
-  // Set the subject
-  smtpData.setSubject(emailSubject);
-
-  // Set the message with HTML format
-  smtpData.setMessage("<div style=\"color:#2f4468;\"><h1>Hello World!</h1><p>- Sent from ESP32 board</p></div>", true);
-  // Set the email message in text format (raw)
-  //smtpData.setMessage("Hello World! - Sent from ESP32 board", false);
-
-  // Add recipients, you can add more than one recipient
-  smtpData.addRecipient(emailRecipient);
-  //smtpData.addRecipient("YOUR_OTHER_RECIPIENT_EMAIL_ADDRESS@EXAMPLE.com");
-
-  smtpData.setSendCallback(sendCallback);
-
-  //Start sending Email, can be set callback function to track the status
-  if (!MailClient.sendMail(smtpData))
-    Serial.println("Error sending Email, " + MailClient.smtpErrorReason());
-
-  //Clear all data from Email object to free memory
-  smtpData.empty();
-  */
 }
 
 void loop() {
@@ -112,28 +79,59 @@ void loop() {
   if (digitalRead(19) == HIGH)
   {
     ledcWrite(0,300);
+    if(interruptCounter <= 0 && iniCount <= 0)
+    {
+      portENTER_CRITICAL(&timerMux);
+      interruptCounter++;
+      iniCount++;
+      portEXIT_CRITICAL(&timerMux);
+      startTimer();
+    }
   }
   else
   {
     ledcWrite(0,0);
   }
+  if(iniCount >0 && interruptCounter <=0)
+  {
+      portENTER_CRITICAL(&timerMux);
+      iniCount--;
+      portEXIT_CRITICAL(&timerMux);
+      Serial.println("supposed to send email.");
+      stopTimer();
+  }
   delay(100);
 }
+void startTimer()
+{
+  //cited from here https://github.com/espressif/arduino-esp32/issues/1313
+  if(timer == NULL)
+  {
+    timer = timerBegin(0,80,true);
+    timerAttachInterrupt(timer, &logouput, true);
+  }
+  timerAlarmWrite(timer, 5000000, true);
 
-// Callback function to get the Email sending status
-void sendCallback(SendStatus msg) {
-  // Print the current status
-  Serial.println(msg.info());
+  yield();
+  timerAlarmEnable(timer);
+}
 
-  // Do something when complete
-  if (msg.success()) {
-    Serial.println("----------------");
+void stopTimer()
+{
+  if(timer != NULL)
+  {
+    timerAlarmDisable(timer);
+    timerDetachInterrupt(timer);
+    timerEnd(timer);
+    timer = NULL;
   }
 }
 
-void Makeasound()
+void IRAM_ATTR logouput()
 {
-  ledcWrite(0,200);
-  delay(3000);
-  ledcWrite(0,0);
+  Serial.println("this should only be called every 5sec.");
+  portENTER_CRITICAL_ISR(&timerMux);
+  interruptCounter--;
+  portEXIT_CRITICAL_ISR(&timerMux);
+  
 }
