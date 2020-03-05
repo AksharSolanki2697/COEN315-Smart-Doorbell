@@ -29,6 +29,7 @@ const char* password = "";
 AsyncWebServer server(80);
 
 boolean takeNewPhoto = false;
+boolean enroll = false;
 
 // OV2640 camera module pins (CAMERA_MODEL_AI_THINKER)
 #define PWDN_GPIO_NUM     32
@@ -167,6 +168,11 @@ void setup() {
     request->send(SPIFFS, FILE_PHOTO, "image/jpg", false);
   });
 
+  server.on("/enroll", HTTP_GET, [](AsyncWebServerRequest * request) {
+    enroll = true;
+    request->send_P(200, "text/plain", "Taking Photo");
+  });
+
   faceInit();
   framesize_t a = FRAMESIZE_CIF;
   sensor_t * s = esp_camera_sensor_get();
@@ -181,6 +187,10 @@ void loop() {
   if (takeNewPhoto) {
     capturePhotoSaveSpiffs();
     takeNewPhoto = false;
+  }
+  if (enroll) {
+    runEnrollFace();
+    enroll = false;
   }
   delay(1);
 }

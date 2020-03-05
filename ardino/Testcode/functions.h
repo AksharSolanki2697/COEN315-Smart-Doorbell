@@ -29,6 +29,7 @@ static int8_t detection_enabled = 0;
 static int8_t recognition_enabled = 0;
 static int8_t is_enrolling = 0;
 static face_id_list id_list = {0};
+static char face_name[FACE_ID_SAVE_NUMBER][4];
 
 static void rgb_print(dl_matrix3du_t *image_matrix, uint32_t color, const char * str){
     fb_data_t fb;
@@ -65,7 +66,7 @@ static int rgb_printf(dl_matrix3du_t *image_matrix, uint32_t color, const char *
     return len;
 }
 
-static int run_face_recognition(dl_matrix3du_t *image_matrix, box_array_t *net_boxes){
+static int run_face_recognition(dl_matrix3du_t *image_matrix, box_array_t *net_boxes, char *names){
     dl_matrix3du_t *aligned_face = NULL;
     int matched_id = 0;
 
@@ -149,6 +150,91 @@ bool checkPhoto( fs::FS &fs ) {
   unsigned int pic_sz = f_pic.size();
   return ( pic_sz > 100 );
 }
+//Run face recongintion Command
+void runEnrollFace( void ) {
+  camera_fb_t * fb = NULL;
+  int64_t fr_start;
+  int64_t fr_end;
+  fr_start = esp_timer_get_time();
+  fr_end = esp_timer_get_time();
+  Serial.println((fr_end)/100000.0);
+  Serial.println((fr_start)/100000.0);
+  Serial.println((fr_start-fr_end)/100000.0);
+  is_enrolling = 1;
+  
+  while(is_enrolling && ((fr_start-fr_end)/100000.0) < 10)
+  {
+    fr_end = esp_timer_get_time();
+    Serial.println("Taking a photo...");
+
+    fb = esp_camera_fb_get();
+    if (!fb) {
+      is_enrolling = 0;
+      Serial.println("Camera capture failed");
+      return;
+    }
+    
+    size_t out_len, out_width, out_height, out_len2;
+    uint8_t * out_buf;
+    bool s;
+    bool detected = false;
+    int face_id = 0;
+    dl_matrix3du_t *image_matrix;
+    if(fb->width <= 400){
+      image_matrix = dl_matrix3du_alloc(1, fb->width, fb->height, 3);
+      if (!image_matrix) {
+          esp_camera_fb_return(fb);
+          is_enrolling = 0;
+          Serial.println("dl_matrix3du_alloc failed");
+          return;
+      }
+
+      out_buf = image_matrix->item;
+      out_len = fb->width * fb->height * 3;
+      out_width = fb->width;
+      out_height = fb->height;
+
+      s = fmt2rgb888(fb->buf, fb->len, fb->format, out_buf);
+
+    
+      if(!s){
+          dl_matrix3du_free(image_matrix);
+          esp_camera_fb_return(fb);
+          is_enrolling = 0;
+          Serial.println("to rgb888 failed");
+          return;
+      }
+
+      box_array_t *net_boxes = face_detect(image_matrix, &mtmn_config);
+  
+      if (net_boxes){
+          detected = true;
+          face_id = run_face_recognition(image_matrix, net_boxes, "");
+          draw_face_boxes(image_matrix, net_boxes, face_id);
+          //free(net_boxes->score);
+          //free(net_boxes->box);
+          //free(net_boxes->landmark);
+          //free(net_boxes);
+      }
+      esp_camera_fb_return(fb);
+      dl_matrix3du_free(image_matrix);
+    }
+    else
+    {
+      Serial.println("Not right camera size");
+      is_enrolling = 0;
+      esp_camera_fb_return(fb);
+      return;
+    }
+  }
+  if(is_enrolling)
+  {
+    delete_face(&id_list);
+    Serial.println("could not enroll");
+    is_enrolling = 0;
+  }
+
+}
 
 // Capture Photo and Save it to SPIFFS
 void capturePhotoSaveSpiffs( void ) {
@@ -189,6 +275,7 @@ void capturePhotoSaveSpiffs( void ) {
 
     
       if(!s){
+          esp_camera_fb_return(fb);
           dl_matrix3du_free(image_matrix);
           Serial.println("to rgb888 failed");
           return;
@@ -198,6 +285,7 @@ void capturePhotoSaveSpiffs( void ) {
   
       if (net_boxes){
           detected = true;
+          face_id = run_face_recognition(image_matrix, net_boxes, "");
           draw_face_boxes(image_matrix, net_boxes, face_id);
           //free(net_boxes->score);
           //free(net_boxes->box);
@@ -208,6 +296,7 @@ void capturePhotoSaveSpiffs( void ) {
       s = fmt2jpg(out_buf, out_len, out_width, out_height, PIXFORMAT_RGB888, 90,  &out_buf2, &out_len2 );
       dl_matrix3du_free(image_matrix);
       if(!s){
+        esp_camera_fb_return(fb);
         Serial.println("JPEG compression failed");
         return ;
       }
