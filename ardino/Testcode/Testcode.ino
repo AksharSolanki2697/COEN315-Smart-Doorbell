@@ -12,6 +12,7 @@
 *********/
 
 #include "WiFi.h"
+#include <WiFiAP.h>
 #include "Arduino.h"
 #include "soc/soc.h"           // Disable brownour problems
 #include "soc/rtc_cntl_reg.h"  // Disable brownour problems
@@ -23,8 +24,9 @@
 
 
 // Replace with your network credentials
-const char* ssid = "SCU-Guest";
+const char* ssid = "travis";
 const char* password = "";
+
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -95,11 +97,16 @@ void setup() {
   Serial.begin(115200);
 
   // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
+  WiFi.softAP(ssid, password);
+  /*
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.println("Connecting to WiFi...");
   }
+  */
+  IPAddress myIP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(myIP);
   if (!SPIFFS.begin(true)) {
     Serial.println("An Error has occurred while mounting SPIFFS");
     ESP.restart();
@@ -193,8 +200,8 @@ void loop() {
     bool en = runEnrollFace();
     Serial.println(en);
     enroll = false;
-    if(en)
-      sendPostData();
+    //if(en)
+      //sendPostData();
   }
   delay(1);
 }

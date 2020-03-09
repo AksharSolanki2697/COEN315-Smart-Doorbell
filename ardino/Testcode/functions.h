@@ -249,10 +249,12 @@ void capturePhotoSaveSpiffs( void ) {
     int64_t fr_end;
     fr_start = esp_timer_get_time();
     fr_end = esp_timer_get_time();
-    uint8_t * out_buf2;
+    uint8_t * out_buf2 = NULL;
     size_t out_len2;
     while((fr_end-fr_start)/SECONDTHING < 10)
     {
+      if(out_buf2 != NULL)
+        free(out_buf2);
       Serial.println("Taking a photo...");
       fr_end = esp_timer_get_time();
       Serial.println((fr_end-fr_start)/1000000.0);
@@ -315,7 +317,6 @@ void capturePhotoSaveSpiffs( void ) {
         }
         else
         {
-          free(out_buf2);
           esp_camera_fb_return(fb);
         }
       }
@@ -337,7 +338,8 @@ void capturePhotoSaveSpiffs( void ) {
         file.write(fb->buf, fb->len); // payload (image), payload length
       }else{
         file.write((const uint8_t* )out_buf2, out_len2);
-        free(out_buf2);
+        if(out_buf2)
+          free(out_buf2);
       }
       Serial.print("The picture has been saved in ");
       Serial.print(FILE_PHOTO);
