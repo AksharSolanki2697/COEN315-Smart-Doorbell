@@ -17,6 +17,7 @@
 #include "soc/rtc_cntl_reg.h"  // Disable brownour problems
 #include "driver/rtc_io.h"
 #include "functions.h"
+#include "httpr.h"
 #include <ESPAsyncWebServer.h>
 #include <StringArray.h>
 
@@ -189,8 +190,11 @@ void loop() {
     takeNewPhoto = false;
   }
   if (enroll) {
-    runEnrollFace();
+    bool en = runEnrollFace();
+    Serial.println(en);
     enroll = false;
+    if(en)
+      sendPostData();
   }
   delay(1);
 }

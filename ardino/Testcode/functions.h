@@ -23,7 +23,7 @@
 #define FACE_COLOR_YELLOW (FACE_COLOR_RED | FACE_COLOR_GREEN)
 #define FACE_COLOR_CYAN   (FACE_COLOR_BLUE | FACE_COLOR_GREEN)
 #define FACE_COLOR_PURPLE (FACE_COLOR_BLUE | FACE_COLOR_RED)
-
+#define SECONDTHING 1000000.0
 static mtmn_config_t mtmn_config = {0};
 static int8_t detection_enabled = 0;
 static int8_t recognition_enabled = 0;
@@ -151,7 +151,7 @@ bool checkPhoto( fs::FS &fs ) {
   return ( pic_sz > 100 );
 }
 //Run face recongintion Command
-void runEnrollFace( void ) {
+bool runEnrollFace( void ) {
   camera_fb_t * fb = NULL;
   int64_t fr_start;
   int64_t fr_end;
@@ -162,7 +162,7 @@ void runEnrollFace( void ) {
   Serial.println((fr_start-fr_end)/100000.0);
   is_enrolling = 1;
   
-  while(is_enrolling && ((fr_start-fr_end)/100000.0) < 10)
+  while(is_enrolling && ((fr_end-fr_start)/SECONDTHING) < 10)
   {
     fr_end = esp_timer_get_time();
     Serial.println("Taking a photo...");
@@ -171,10 +171,10 @@ void runEnrollFace( void ) {
     if (!fb) {
       is_enrolling = 0;
       Serial.println("Camera capture failed");
-      return;
+      return false;
     }
     
-    size_t out_len, out_width, out_height, out_len2;
+    size_t out_len, out_width, out_height;
     uint8_t * out_buf;
     bool s;
     bool detected = false;
@@ -186,7 +186,7 @@ void runEnrollFace( void ) {
           esp_camera_fb_return(fb);
           is_enrolling = 0;
           Serial.println("dl_matrix3du_alloc failed");
-          return;
+          return false;
       }
 
       out_buf = image_matrix->item;
@@ -202,7 +202,7 @@ void runEnrollFace( void ) {
           esp_camera_fb_return(fb);
           is_enrolling = 0;
           Serial.println("to rgb888 failed");
-          return;
+          return false;
       }
 
       box_array_t *net_boxes = face_detect(image_matrix, &mtmn_config);
@@ -224,15 +224,17 @@ void runEnrollFace( void ) {
       Serial.println("Not right camera size");
       is_enrolling = 0;
       esp_camera_fb_return(fb);
-      return;
+      return false;
     }
   }
   if(is_enrolling)
   {
-    delete_face(&id_list);
+    delete_face(&id_list); //deletes all faces maybe bug
     Serial.println("could not enroll");
     is_enrolling = 0;
+    return false;
   }
+  return true;
 
 }
 
@@ -243,62 +245,83 @@ void capturePhotoSaveSpiffs( void ) {
 
   do {
     // Take a photo with the camera
-    Serial.println("Taking a photo...");
-
-    fb = esp_camera_fb_get();
-    if (!fb) {
-      Serial.println("Camera capture failed");
-      return;
-    }
-    
-    size_t out_len, out_width, out_height, out_len2;
-    uint8_t * out_buf;
+    int64_t fr_start;
+    int64_t fr_end;
+    fr_start = esp_timer_get_time();
+    fr_end = esp_timer_get_time();
     uint8_t * out_buf2;
-    bool s;
-    bool detected = false;
-    int face_id = 0;
-    dl_matrix3du_t *image_matrix;
-    if(fb->width <= 400){
-      image_matrix = dl_matrix3du_alloc(1, fb->width, fb->height, 3);
-      if (!image_matrix) {
-          esp_camera_fb_return(fb);
-          Serial.println("dl_matrix3du_alloc failed");
-          return;
+    size_t out_len2;
+    while((fr_end-fr_start)/SECONDTHING < 10)
+    {
+      Serial.println("Taking a photo...");
+      fr_end = esp_timer_get_time();
+      Serial.println((fr_end-fr_start)/1000000.0);
+      fb = esp_camera_fb_get();
+      if (!fb) {
+        Serial.println("Camera capture failed");
+        return;
       }
-
-      out_buf = image_matrix->item;
-      out_len = fb->width * fb->height * 3;
-      out_width = fb->width;
-      out_height = fb->height;
-
-      s = fmt2rgb888(fb->buf, fb->len, fb->format, out_buf);
-
-    
-      if(!s){
-          esp_camera_fb_return(fb);
-          dl_matrix3du_free(image_matrix);
-          Serial.println("to rgb888 failed");
-          return;
-      }
-
-      box_array_t *net_boxes = face_detect(image_matrix, &mtmn_config);
+      
+      size_t out_len, out_width, out_height;
+      uint8_t * out_buf;
+      bool s;
+      bool detected = false;
+      int face_id = 0;
+      dl_matrix3du_t *image_matrix;
+      if(fb->width <= 400){
+        image_matrix = dl_matrix3du_alloc(1, fb->width, fb->height, 3);
+        if (!image_matrix) {
+            esp_camera_fb_return(fb);
+            Serial.println("dl_matrix3du_alloc failed");
+            return;
+        }
   
-      if (net_boxes){
-          detected = true;
-          face_id = run_face_recognition(image_matrix, net_boxes, "");
-          draw_face_boxes(image_matrix, net_boxes, face_id);
-          //free(net_boxes->score);
-          //free(net_boxes->box);
-          //free(net_boxes->landmark);
-          //free(net_boxes);
+        out_buf = image_matrix->item;
+        out_len = fb->width * fb->height * 3;
+        out_width = fb->width;
+        out_height = fb->height;
+  
+        s = fmt2rgb888(fb->buf, fb->len, fb->format, out_buf);
+  
+      
+        if(!s){
+            esp_camera_fb_return(fb);
+            dl_matrix3du_free(image_matrix);
+            Serial.println("to rgb888 failed");
+            return;
+        }
+  
+        box_array_t *net_boxes = face_detect(image_matrix, &mtmn_config);
+    
+        if (net_boxes){
+            detected = true;
+            face_id = run_face_recognition(image_matrix, net_boxes, "");
+            draw_face_boxes(image_matrix, net_boxes, face_id);
+            //free(net_boxes->score);
+            //free(net_boxes->box);
+            //free(net_boxes->landmark);
+            //free(net_boxes);
+        }
+        s = fmt2jpg(out_buf, out_len, out_width, out_height, PIXFORMAT_RGB888, 90,  &out_buf2, &out_len2 );
+        dl_matrix3du_free(image_matrix);
+        if(!s){
+          esp_camera_fb_return(fb);
+          Serial.println("JPEG compression failed");
+          return ;
+        }
+        if(net_boxes)
+        {
+          break;
+        }
+        else
+        {
+          free(out_buf2);
+          esp_camera_fb_return(fb);
+        }
       }
-
-      s = fmt2jpg(out_buf, out_len, out_width, out_height, PIXFORMAT_RGB888, 90,  &out_buf2, &out_len2 );
-      dl_matrix3du_free(image_matrix);
-      if(!s){
-        esp_camera_fb_return(fb);
-        Serial.println("JPEG compression failed");
-        return ;
+      else
+      {
+        break;
       }
     }
     // Photo file name
