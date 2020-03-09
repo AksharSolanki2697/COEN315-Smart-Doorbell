@@ -3,7 +3,7 @@
 #include <WiFiClient.h>"
 #include "ESPAsyncWebServer.h"
 #include "functions.h"
-#include "other.h"
+//#include "other.h"
 
 AsyncWebServer server(80);
 
@@ -60,22 +60,20 @@ void setup(){
   
   //other method
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    uint8_t a[4408] = sendRequest();
-    request->send(200, "text/plain", (const char *)a);
+    int a=0;
+    request->send(200, "text/plain", "a");
   });
   server.begin();
   Serial.println();
 }
 
 void loop() {
-  /*
   WiFiClient client = server.available();
   if (client)
   {
     client.stop();
     Serial.println("Client");
   }
-  */
   if (digitalRead(19) == HIGH)
   {
     ledcWrite(0,300);

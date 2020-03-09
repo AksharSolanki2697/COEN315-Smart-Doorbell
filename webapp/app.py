@@ -9,7 +9,7 @@ app = Flask(__name__)
 
 def button_pressed():
         
-    URL = "http://172.31.186.198:5000/"
+    URL = ""
            
     r = requests.get(url = URL)
     return r.content
