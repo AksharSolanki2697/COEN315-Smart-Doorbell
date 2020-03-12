@@ -34,6 +34,7 @@ var app = {
     // function, we must explicitly call 'app.receivedEvent(...);'
     onDeviceReady: function() {
         app.receivedEvent('deviceready');
+        $("#loginForm").on("submit",handleLogin);
     },
     // Update DOM on a Received Event
     receivedEvent: function(id) {
@@ -45,5 +46,38 @@ var app = {
         receivedElement.setAttribute('style', 'display:block;');
 
         console.log('Received Event: ' + id);
+        get_pressed();
     }
 };
+//code from https://www.raymondcamden.com/2011/11/10/Example-of-serverbased-login-with-PhoneGap
+function handleLogin() {
+	var form = $("#loginForm");	
+	//disable the button so we can't resubmit while we wait
+	$("#submitButton",form).attr("disabled","disabled");
+	var u = $("#username", form).val();
+	var p = $("#password", form).val();
+	console.log("click");
+	if(u != '' && p!= '') {
+		$.get("http://bart.student-t-test.com/stations.php", {username:u,password:p}, function(res) {
+			if(res) {
+        		//just go
+				window.location = "actual.html";
+			} else {
+				navigator.notification.alert("Your login failed", function() {});
+			}
+	    	$("#submitButton").removeAttr("disabled");
+		},"json");
+	} else {
+		//Thanks Igor!
+		navigator.notification.alert("You must enter a username and password", function() {});
+		$("#submitButton").removeAttr("disabled");
+	}
+	return false;
+}
+
+function get_pressed() {
+	$.get("http://bart.student-t-test.com/stations.php", function(res) {
+        $("#buttonpressed").html(res);
+	},"json");
+	return false;
+}
