@@ -254,7 +254,10 @@ void capturePhotoSaveSpiffs( void ) {
     while((fr_end-fr_start)/SECONDTHING < 10)
     {
       if(out_buf2 != NULL)
+      {
         free(out_buf2);
+        out_buf2 = NULL;
+      } 
       Serial.println("Taking a photo...");
       fr_end = esp_timer_get_time();
       Serial.println((fr_end-fr_start)/1000000.0);
@@ -290,7 +293,7 @@ void capturePhotoSaveSpiffs( void ) {
             esp_camera_fb_return(fb);
             dl_matrix3du_free(image_matrix);
             Serial.println("to rgb888 failed");
-            return;
+            continue;
         }
   
         box_array_t *net_boxes = face_detect(image_matrix, &mtmn_config);
