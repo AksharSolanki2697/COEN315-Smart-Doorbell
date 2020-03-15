@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Results</title>
+</head>
+<body>
+    {% if results %}
+        <table>
+            <tbody>
+            {% for img_name in results %}
+                <tr>
+                   
+			<td><img src="uploads/{{ img_name }}"></td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        No results :(
+    {% endif %}
+</body>
+</html>
