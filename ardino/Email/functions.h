@@ -1,10 +1,11 @@
 //email stuff
-#define emailSenderAccount    "tle2@scu.edu"    
-#define emailSenderPassword "zqseuywzwnfulytb"
-#define emailRecipient        "tle2@scu.edu"
+#define emailSenderAccount    "ramyau100@gmail.com"    
+#define emailSenderPassword "hkcpunmbtrmcerkw"
+#define emailRecipient        "ramyau100@gmail.com"
 #define smtpServer            "smtp.gmail.com"
 #define smtpServerPort        465
 #define emailSubject          "ESP32 Test"
+#include "SPIFFS.h"
 
 SMTPData smtpData;
 void sendCallback(SendStatus msg);
@@ -35,6 +36,11 @@ void generateEmail()
   // Add recipients, you can add more than one recipient
   smtpData.addRecipient(emailRecipient);
   //smtpData.addRecipient("YOUR_OTHER_RECIPIENT_EMAIL_ADDRESS@EXAMPLE.com");
+  if(SPIFFS.exists("/test-file.jpg") == 1)
+    Serial.println("h");
+  smtpData.addAttachFile("/test-file.jpg","image/jpg");
+  
+  smtpData.setFileStorageType(MailClientStorageType::SPIFFS);
 
   smtpData.setSendCallback(sendCallback);
 
