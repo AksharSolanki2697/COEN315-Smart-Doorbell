@@ -58,15 +58,19 @@ function handleLogin() {
 	var p = $("#password", form).val();
 	console.log("click");
 	if(u != '' && p!= '') {
-		$.get("http://bart.student-t-test.com/stations.php", {username:u,password:p}, function(res) {
-			if(res) {
+		$.post("http://knock.aksharsolanki.com/handle_data_phonegap", $("#loginForm").serialize(), function(res) {
+            console.log(res);
+			if(res.msg == 'True') {
         		//just go
 				window.location = "actual.html";
 			} else {
 				navigator.notification.alert("Your login failed", function() {});
 			}
 	    	$("#submitButton").removeAttr("disabled");
-		},"json");
+		},"json").fail(function(xhr, status, error) {
+            // error handling
+            console.log(xhr + error);
+        } );
 	} else {
 		//Thanks Igor!
 		navigator.notification.alert("You must enter a username and password", function() {});
@@ -76,8 +80,12 @@ function handleLogin() {
 }
 
 function get_pressed() {
-	$.get("http://bart.student-t-test.com/stations.php", function(res) {
-        $("#buttonpressed").html(res);
-	},"json");
+	$.get("http://knock.aksharsolanki.com/count", function(res) {
+        $("#buttonpressed").html(res.count);
+        console.log(res.count);
+	},"json").fail(function(xhr, status, error) {
+        // error handling
+        console.log(xhr + error);
+    });
 	return false;
 }
