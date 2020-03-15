@@ -34,6 +34,7 @@ var app = {
     // function, we must explicitly call 'app.receivedEvent(...);'
     onDeviceReady: function() {
         app.receivedEvent('deviceready');
+        $("#loginForm").on("submit",handleLogin);
     },
     // Update DOM on a Received Event
     receivedEvent: function(id) {
@@ -45,5 +46,46 @@ var app = {
         receivedElement.setAttribute('style', 'display:block;');
 
         console.log('Received Event: ' + id);
+        get_pressed();
     }
 };
+//code from https://www.raymondcamden.com/2011/11/10/Example-of-serverbased-login-with-PhoneGap
+function handleLogin() {
+	var form = $("#loginForm");	
+	//disable the button so we can't resubmit while we wait
+	$("#submitButton",form).attr("disabled","disabled");
+	var u = $("#username", form).val();
+	var p = $("#password", form).val();
+	console.log("click");
+	if(u != '' && p!= '') {
+		$.post("http://knock.aksharsolanki.com/handle_data_phonegap", $("#loginForm").serialize(), function(res) {
+            console.log(res);
+			if(res.msg == 'True') {
+        		//just go
+				window.location = "actual.html";
+			} else {
+				navigator.notification.alert("Your login failed", function() {});
+			}
+	    	$("#submitButton").removeAttr("disabled");
+		},"json").fail(function(xhr, status, error) {
+            // error handling
+            console.log(xhr + error);
+        } );
+	} else {
+		//Thanks Igor!
+		navigator.notification.alert("You must enter a username and password", function() {});
+		$("#submitButton").removeAttr("disabled");
+	}
+	return false;
+}
+
+function get_pressed() {
+	$.get("http://knock.aksharsolanki.com/count", function(res) {
+        $("#buttonpressed").html(res.count);
+        console.log(res.count);
+	},"json").fail(function(xhr, status, error) {
+        // error handling
+        console.log(xhr + error);
+    });
+	return false;
+}

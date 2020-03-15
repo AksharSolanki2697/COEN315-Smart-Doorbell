@@ -27,6 +27,8 @@
 const char* ssid = "travis";
 const char* password = "";
 
+const char* ssidW     = "SCU-Guest";
+const char* passwordW = "";
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -95,6 +97,23 @@ const char index_html[] PROGMEM = R"rawliteral(
 void setup() {
   // Serial port for debugging purposes
   Serial.begin(115200);
+  delay(10);
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssidW);
+
+  WiFi.begin(ssidW, passwordW);
+
+  while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 
   // Connect to Wi-Fi
   WiFi.softAP(ssid, password);
@@ -195,6 +214,8 @@ void loop() {
   if (takeNewPhoto) {
     capturePhotoSaveSpiffs();
     takeNewPhoto = false;
+    Serial.println("hey");
+    sendpicture();
   }
   if (enroll) {
     bool en = runEnrollFace();
