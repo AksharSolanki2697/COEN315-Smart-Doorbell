@@ -12,11 +12,11 @@
 *********/
 
 #include "WiFi.h"
-#include <WiFiAP.h>
+//#include <WiFiAP.h>
 #include "Arduino.h"
-#include "soc/soc.h"           // Disable brownour problems
-#include "soc/rtc_cntl_reg.h"  // Disable brownour problems
-#include "driver/rtc_io.h"
+//#include "soc/soc.h"           // Disable brownour problems
+//#include "soc/rtc_cntl_reg.h"  // Disable brownour problems
+//#include "driver/rtc_io.h"
 #include "functions.h"
 #include "httpr.h"
 #include <ESPAsyncWebServer.h>
